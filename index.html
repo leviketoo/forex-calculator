@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Tickmill $100 Risk Lotu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            bg: '#090d16',
+                            card: '#111827',
+                            accent: '#10b981', /* Tickmill yeşili tonu */
+                            accentHover: '#059669',
+                            border: '#1f2937',
+                            muted: '#9ca3af'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #090d16;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        input, select {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen flex items-center justify-center p-4">
+
+<div class="container max-w-md w-full">
+    <div class="text-center mb-6">
+        <h1 class="text-2xl font-extrabold tracking-tight text-white">
+            TICKMILL <span class="text-brand-accent">LOT MATİK</span>
+        </h1>
+        <p class="text-xs text-brand-muted mt-1">Sabit Risk ve Anlık Fiyat Bazlı Hesaplayıcı</p>
+    </div>
+
+    <!-- ANA KART -->
+    <div class="bg-brand-card border border-brand-border rounded-2xl p-5 shadow-2xl space-y-4">
+        
+        <!-- Sabit Risk Girişi -->
+        <div>
+            <label class="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-2">Sabit Risk Tutarı ($)</label>
+            <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-brand-accent font-bold text-lg">$</span>
+                <input type="text" id="risk-amount" value="100" class="w-full bg-brand-bg border border-brand-border rounded-xl py-3 pl-8 pr-4 text-white font-bold text-lg focus:border-brand-accent outline-none transition" inputmode="decimal">
+            </div>
+        </div>
+
+        <!-- Enstrüman Seçimi -->
+        <div>
+            <label class="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-2">Enstrüman (Parite / CFD)</label>
+            <select id="asset" class="w-full bg-brand-bg border border-brand-border rounded-xl p-3 text-white font-bold focus:border-brand-accent outline-none transition">
+                <option value="EURUSD">EURUSD (Forex)</option>
+                <option value="XAUUSD">XAUUSD (Altın)</option>
+                <option value="XAGUSD">XAGUSD (Gümüş)</option>
+                <option value="DE40">DE40 (Almanya 40 DAX)</option>
+                <option value="USTEC">USTEC (Nasdaq 100)</option>
+                <option value="US30">US30 (Dow Jones 30)</option>
+                <option value="BRENT">BRENT (Petrol)</option>
+            </select>
+        </div>
+
+        <!-- DE40 EURUSD Kur Çevirici (Yalnızca DE40 seçildiğinde görünür) -->
+        <div id="eurusd-rate-container" class="hidden bg-gray-900/50 p-3 rounded-xl border border-brand-border">
+            <label class="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Anlık EURUSD Kuru (DAX EUR bazlı olduğu için)</label>
+            <input type="text" id="eurusd-rate" value="1.0850" class="w-full bg-brand-bg border border-brand-border rounded-lg p-2 text-white font-bold text-sm focus:border-brand-accent outline-none transition" inputmode="decimal">
+        </div>
+
+        <!-- Giriş ve Stop Loss Fiyatları -->
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-2">Giriş Fiyatı (Entry)</label>
+                <input type="text" id="entry" value="1.08500" class="w-full bg-brand-bg border border-brand-border rounded-xl p-3 text-white font-bold text-base focus:border-brand-accent outline-none transition" inputmode="decimal">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-2">Stop Loss (SL)</label>
+                <input type="text" id="sl" value="1.08300" class="w-full bg-brand-bg border border-brand-border rounded-xl p-3 text-white font-bold text-base focus:border-brand-accent outline-none transition" inputmode="decimal">
+            </div>
+        </div>
+
+        <!-- Dinamik Bilgi / Kontrat Ayarı Paneli (Gerekirse Manuel Kontrat Değişimi İçin) -->
+        <div class="border-t border-brand-border/60 pt-3">
+            <button onclick="toggleContractPanel()" class="flex items-center justify-between w-full text-xs text-brand-muted hover:text-white transition outline-none">
+                <span>🔧 Hesaplama Detayları & Kontrat Ayarı</span>
+                <span id="panel-arrow">▼</span>
+            </button>
+            <div id="contract-panel" class="hidden mt-3 space-y-3 bg-gray-900/40 p-3 rounded-xl border border-brand-border/40 text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="text-brand-muted">Bu parite için standart kontrat:</span>
+                    <input type="text" id="manual-contract" class="w-24 bg-brand-bg border border-brand-border rounded p-1 text-center font-bold text-white outline-none focus:border-brand-accent" inputmode="numeric">
+                </div>
+                <p class="text-[10px] text-brand-muted leading-relaxed">
+                    * Sinyal aldığınız Tickmill hesabında kontrat büyüklükleri farklıysa yukarıdaki değeri güncelleyebilirsiniz. Varsayılanlar otomatik ayarlanır.
+                </p>
+            </div>
+        </div>
+
+        <!-- SONUÇ PANELİ -->
+        <div class="bg-gradient-to-br from-emerald-950/40 to-brand-card border border-brand-accent/40 rounded-2xl p-5 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-brand-accent"></div>
+            <h2 class="text-xs font-bold text-brand-muted uppercase tracking-widest mb-1">Açılması Gereken Lot</h2>
+            <div class="text-5xl font-extrabold text-brand-accent my-2 tracking-tight" id="lot-result">
+                0.50
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-brand-border text-left">
+                <div>
+                    <div class="text-[10px] text-brand-muted uppercase tracking-wider">Hedeflenen Risk</div>
+                    <div class="text-sm font-bold text-white" id="risk-cash">$100.00</div>
+                </div>
+                <div>
+                    <div class="text-[10px] text-brand-muted uppercase tracking-wider">Fiyat Mesafesi</div>
+                    <div class="text-sm font-bold text-white" id="price-diff">20.0 Pip</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kopyalama Butonu -->
+        <button id="copy-btn" class="w-full bg-brand-accent hover:bg-brand-accentHover text-brand-bg font-extrabold text-sm py-3 rounded-xl transition shadow-lg active:scale-95 outline-none">
+            LOT SAYISINI KOPYALA
+        </button>
+
+    </div>
+
+    <!-- Dipnot -->
+    <div class="text-center text-[10px] text-brand-muted mt-4 leading-relaxed">
+        Tickmill Standart CFD çarpanları: Forex 100K | Altın 100 | Gümüş 5K | Endeksler 1 | Brent 100.<br>
+        Zarar hesaplaması girilen fiyat farkına göre anlık matematiksel olarak yapılır.
+    </div>
+</div>
+
+<script>
+    
+    // Gelişmiş Güvenli Başlatıcı (DOMContentLoaded kilitlenmesini engeller)
+    function startApp() {
+        const riskInput = document.getElementById('risk-amount');
+        const assetSelect = document.getElementById('asset');
+        const entryInput = document.getElementById('entry');
+        const slInput = document.getElementById('sl');
+        const eurusdRateInput = document.getElementById('eurusd-rate');
+        const eurusdRateContainer = document.getElementById('eurusd-rate-container');
+        const manualContractInput = document.getElementById('manual-contract');
+        const lotResult = document.getElementById('lot-result');
+        const riskCashDisplay = document.getElementById('risk-cash');
+        const priceDiffDisplay = document.getElementById('price-diff');
+        const copyBtn = document.getElementById('copy-btn');
+
+        // Tickmill CFDs varsayılan kontrat büyüklükleri
+        const defaultContractSizes = {
+            'EURUSD': 100000,
+            'XAUUSD': 100,
+            'XAGUSD': 5000,
+            'DE40': 1,
+            'USTEC': 1,
+            'US30': 1,
+            'BRENT': 100
+        };
+
+        // Otomatik pre-fill (Hazır veri) şablonları
+        const assetTemplates = {
+            'EURUSD': { e: '1.08500', s: '1.08300' },
+            'XAUUSD': { e: '2350.00', s: '2345.00' },
+            'XAGUSD': { e: '30.50', s: '30.00' },
+            'DE40': { e: '18500', s: '18450' },
+            'USTEC': { e: '18000', s: '17950' },
+            'US30': { e: '39000', s: '38900' },
+            'BRENT': { e: '82.50', s: '81.50' }
+        };
+
+        // Türkçe klavyedeki virgülü noktaya çeviren güvenli dönüştürücü
+        function cleanAndParse(val) {
+            if (!val) return 0;
+            // Tüm virgülleri noktaya çevir, gereksiz karakterleri temizle
+            let cleaned = val.toString().replace(/,/g, '.').replace(/[^0-9.]/g, '');
+            return parseFloat(cleaned) || 0;
+        }
+
+        // Ana Hesaplama Motoru
+        function calculate() {
+            const risk = cleanAndParse(riskInput.value);
+            const entry = cleanAndParse(entryInput.value);
+            const sl = cleanAndParse(slInput.value);
+            const asset = assetSelect.value;
+            const eurusdRate = cleanAndParse(eurusdRateInput.value);
+            const contract = cleanAndParse(manualContractInput.value) || 1;
+
+            // DE40 özel EURUSD kurunu göster/gizle
+            if (asset === 'DE40') {
+                eurusdRateContainer.style.classList?.remove('hidden');
+                eurusdRateContainer.style.display = 'block';
+            } else {
+                eurusdRateContainer.style.classList?.add('hidden');
+                eurusdRateContainer.style.display = 'none';
+            }
+
+            // Nakit Risk Gösterimi
+            riskCashDisplay.textContent = '$' + risk.toFixed(2);
+
+            // Giriş hatalarını denetle
+            if (risk <= 0 || entry <= 0 || sl <= 0 || entry === sl) {
+                lotResult.textContent = '0.00';
+                priceDiffDisplay.textContent = '0.00';
+                return;
+            }
+
+            const distance = Math.abs(entry - sl);
+
+            // Mesafe gösterimi birimi
+            if (asset === 'EURUSD') {
+                priceDiffDisplay.textContent = (distance * 10000).toFixed(1) + ' Pip';
+            } else if (asset === 'XAUUSD' || asset === 'XAGUSD' || asset === 'BRENT') {
+                priceDiffDisplay.textContent = '$' + distance.toFixed(2);
+            } else {
+                priceDiffDisplay.textContent = distance.toFixed(1) + ' Puan';
+            }
+
+            let calculatedLot = 0;
+
+            if (asset === 'DE40') {
+                // DAX Eur bazlı olduğu için risk dolarını Euro'ya çevir
+                const rate = eurusdRate > 0 ? eurusdRate : 1.0850;
+                const riskInEur = risk / rate;
+                calculatedLot = riskInEur / (distance * contract);
+            } else {
+                calculatedLot = risk / (distance * contract);
+            }
+
+            // Sayısal güvenlik kontrolü
+            if (!isFinite(calculatedLot) || calculatedLot < 0) {
+                calculatedLot = 0;
+            }
+
+            // Sonucu ekrana yazdır (Min 0.01 kontrolü ile)
+            if (calculatedLot > 0 && calculatedLot < 0.01) {
+                lotResult.textContent = '0.01 (Min)';
+            } else {
+                lotResult.textContent = calculatedLot.toFixed(2);
+            }
+        }
+
+        // Parite Değiştiğinde Otomatik Güncelleme
+        assetSelect.addEventListener('change', () => {
+            const asset = assetSelect.value;
+            const template = assetTemplates[asset];
+            
+            // Fiyatları ve kontrat büyüklüğünü güncelle
+            entryInput.value = template.e;
+            slInput.value = template.s;
+            manualContractInput.value = defaultContractSizes[asset];
+
+            calculate();
+        });
+
+        // Telefon kopyalama aksiyonu
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = lotResult.textContent.split(' ')[0]; // '(Min)' kısmını temizle
+            if (textToCopy === '0.00') return;
+
+            const tempInput = document.createElement('input');
+            tempInput.value = textToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            // Kopyalandı efekti
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = '✓ LОT KOPYALANDI!';
+            copyBtn.style.backgroundColor = '#059669';
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+                copyBtn.style.backgroundColor = '#10b981';
+            }, 1200);
+        });
+
+        // Tüm girdiler için gerçek zamanlı dinleyiciler (input, keyup, blur, change)
+        const inputs = [riskInput, entryInput, slInput, eurusdRateInput, manualContractInput];
+        ['input', 'keyup', 'change', 'blur'].forEach(event => {
+            inputs.forEach(input => {
+                input.addEventListener(event, calculate);
+            });
+        });
+
+        // İlk kurulum tetiklemesi
+        assetSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Akordeon Kontrat Paneli Aç/Kapat
+    function toggleContractPanel() {
+        const panel = document.getElementById('contract-panel');
+        const arrow = document.getElementById('panel-arrow');
+        if (panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden');
+            arrow.textContent = '▲';
+        } else {
+            panel.classList.add('hidden');
+            arrow.textContent = '▼';
+        }
+    }
+
+    // DOM'un yüklenme durumunu garantiye alan yapı
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+        startApp();
+    } else {
+        document.addEventListener("DOMContentLoaded", startApp);
+    }
+</script>
+</body>
+</html>
